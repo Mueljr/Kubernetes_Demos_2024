@@ -2,7 +2,7 @@ name: AstroOps CI/CD
 
 on:
   schedule:
-    - cron: '*/10 * * * *'  # every 10 mins
+    - cron: '*/10 * * * *'  # every 10 minutes
   workflow_dispatch:
 
 jobs:
@@ -31,14 +31,36 @@ jobs:
         run: echo "✅ Safe to deploy — Launching AstroOps pipeline!"
 
       - name: Send Email Notification
-        if: always()  # Runs after all steps, even if the previous steps fail or succeed
+        if: always()
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
         run: |
-          SUBJECT="AstroOps Pipeline Status"
-          MESSAGE="Deployment was successful!"
-          
-          if [ "${{ steps.flare_check.outcome }}" != "success" ]; then
-            SUBJECT="AstroOps Pipeline Failure"
-            MESSAGE="Solar flare detected, deployment aborted."
-          fi
-          
-          echo -e "Subject:${SUBJECT}\n\n${MESSAGE}" | sendmail -v -S smtp.gmail.com:587 -f "${{ secrets.GMAIL_USER }}" -au"${{ secrets.GMAIL_USER }}" -ap"${{ secrets.GMAIL_PASSWORD }}" recipient@example.com
+          python3 <<EOF
+          import smtplib
+          from email.mime.text import MIMEText
+          from email.mime.multipart import MIMEMultipart
+          import os
+
+          status = "${{ steps.flare_check.outcome }}"
+          subject = "AstroOps Pipeline Status"
+          body = "✅ Deployment was successful!"
+
+          if status != "success":
+              subject = "AstroOps Pipeline Failure"
+              body = "⚠️ Solar flare detected, deployment aborted."
+
+          sender = os.environ["GMAIL_USER"]
+          password = os.environ["GMAIL_PASSWORD"]
+          recipient = "your_email@example.com"  # <-- Replace this
+
+          msg = MIMEMultipart()
+          msg["From"] = sender
+          msg["To"] = recipient
+          msg["Subject"] = subject
+          msg.attach(MIMEText(body, "plain"))
+
+          with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+              server.login(sender, password)
+              server.send_message(msg)
+          EOF
