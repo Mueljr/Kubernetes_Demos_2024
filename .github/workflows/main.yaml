@@ -64,3 +64,4 @@ jobs:
               server.login(sender, password)
               server.send_message(msg)
           EOF
+
