@@ -1,0 +1,31 @@
+name: AstroOps CI/CD
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # every 10 mins
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Check Solar Flare Activity
+        env:
+          NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+        run: |
+          python solar-flare-checker.py
+
+      - name: Conditional Deployment
+        if: ${{ steps.flare_check.outcome == 'success' }}
+        run: echo "✅ Safe to deploy — Launching AstroOps pipeline!"
