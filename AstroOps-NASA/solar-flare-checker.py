@@ -1,3 +1,6 @@
+import sys
+sys.exit(1)  # Simulate a failure
+
 import requests
 import sys
 import os
