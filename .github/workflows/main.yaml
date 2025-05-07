@@ -21,7 +21,7 @@ jobs:
         run: pip install requests
 
       - name: Check Solar Flare Activity
-        id: flare_check  
+        id: flare_check
         env:
           NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
         run: python AstroOps-NASA/solar-flare-checker.py
@@ -29,3 +29,16 @@ jobs:
       - name: Conditional Deployment
         if: steps.flare_check.outcome == 'success'
         run: echo "✅ Safe to deploy — Launching AstroOps pipeline!"
+
+      - name: Send Email Notification
+        if: always()  # Runs after all steps, even if the previous steps fail or succeed
+        run: |
+          SUBJECT="AstroOps Pipeline Status"
+          MESSAGE="Deployment was successful!"
+          
+          if [ "${{ steps.flare_check.outcome }}" != "success" ]; then
+            SUBJECT="AstroOps Pipeline Failure"
+            MESSAGE="Solar flare detected, deployment aborted."
+          fi
+          
+          echo -e "Subject:${SUBJECT}\n\n${MESSAGE}" | sendmail -v -S smtp.gmail.com:587 -f "${{ secrets.GMAIL_USER }}" -au"${{ secrets.GMAIL_USER }}" -ap"${{ secrets.GMAIL_PASSWORD }}" recipient@example.com
